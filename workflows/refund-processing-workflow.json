@@ -1,0 +1,567 @@
+{
+  "name": "Project 4 - Human in the Loop Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "refund-request",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3153982f-48a8-443c-852a-310ae77e98c3",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst analysis = $input.first().json;\nconst request = $('Webhook').first().json.body;\n\nconst refundAmount = Number(request.refund_amount);\n\nconst purchaseDate = new Date(request.purchase_date);\nconst today = new Date();\n\nconst daysSincePurchase = Math.floor(\n    (today - purchaseDate) / (1000 * 60 * 60 * 24)\n);\n\nconst eligibleCategories = [\n    \"faulty_product\",\n    \"wrong_item\"\n];\n\nconst reviewReasons = [];\n\nif (refundAmount > 50) {\n    reviewReasons.push(\"Refund exceeds $50 limit\");\n}\n\nif (daysSincePurchase > 30) {\n    reviewReasons.push(\"Purchase is older than 30 days\");\n}\n\nif (!eligibleCategories.includes(analysis.category)) {\n    reviewReasons.push(\"Refund category requires review\");\n}\n\nif (analysis.risk_level !== \"low\") {\n    reviewReasons.push(\"AI identified elevated or unknown risk\");\n}\n\nif (analysis.recommendation !== \"approve\") {\n    reviewReasons.push(\"AI did not recommend approval\");\n}\n\nif (\n    !request.customer_name ||\n    !request.customer_email ||\n    !request.order_id ||\n    !request.refund_reason ||\n    !Number.isFinite(refundAmount) ||\n    refundAmount <= 0 ||\n    Number.isNaN(purchaseDate.getTime()) ||\n    daysSincePurchase < 0\n) {\n    reviewReasons.push(\"Missing or invalid request information\");\n}\n\nconst decision = reviewReasons.length === 0\n    ? \"auto_approved\"\n    : \"pending_review\";\n\nreturn [{\n    json: {\n        ...analysis,\n        refund_amount: refundAmount,\n        days_since_purchase: daysSincePurchase,\n        decision,\n        review_reasons: reviewReasons\n    }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "2582afe2-5d63-4b38-880e-d6fff6eaf8fc",
+      "name": "Refund Decision Rules"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_DATA_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "refund_requests"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "customer_name": "={{ $json.body.customer_name }}",
+            "customer_email": "={{ $json.body.customer_email }}",
+            "order_id": "={{ $json.body.order_id }}",
+            "refund_amount": "={{ $json.body.refund_amount }}",
+            "purchase_date": "={{ $json.body.purchase_date }}",
+            "refund_reason": "={{ $json.body.refund_reason }}",
+            "status": "pending_analysis"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "order_id",
+              "displayName": "order_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "refund_amount",
+              "displayName": "refund_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "purchase_date",
+              "displayName": "purchase_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "refund_reason",
+              "displayName": "refund_reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_summary",
+              "displayName": "ai_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_recommendation",
+              "displayName": "ai_recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "manager_decision",
+              "displayName": "manager_decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "manager_notes",
+              "displayName": "manager_notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "8a656a1a-0e68-429b-983b-28fe00761678",
+      "name": "Save Refund Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=\n{{\n  JSON.stringify({\n    model: \"claude-haiku-4-5-20251001\",\n    max_tokens: 500,\n    messages: [\n      {\n        role: \"user\",\n        content: `You are an AI assistant analysing refund requests for an online retailer.\n\nAnalyse the following refund request:\n\nCustomer: ${$('Webhook').item.json.body.customer_name}\nOrder ID: ${$('Webhook').item.json.body.order_id}\nRefund Amount: $${$('Webhook').item.json.body.refund_amount}\nPurchase Date: ${$('Webhook').item.json.body.purchase_date}\nRefund Reason: ${$('Webhook').item.json.body.refund_reason}\n\nReturn ONLY a valid JSON object containing:\n{\n  \"category\": \"faulty_product | wrong_item | change_of_mind | missing_delivery | other\",\n  \"risk_level\": \"low | medium | high\",\n  \"summary\": \"Brief summary of the refund request\",\n  \"recommendation\": \"approve | manager_review\",\n  \"reasoning\": \"Brief explanation of your recommendation\"\n}\n\nDo not include Markdown or additional text. Your recommendation is advisory only. Do not claim that the refund has been approved.`\n      }\n    ]\n  })\n}}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "0950da2d-8178-430e-825b-7d14b74fe1f1",
+      "name": "Claude Refund Analysis"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst response = $input.first().json;\n\nconst rawText = response.content[0].text;\n\nconst cleanedText = rawText\n    .replace(/```json/gi, \"\")\n    .replace(/```/g, \"\")\n    .trim();\n\nlet analysis;\n\ntry {\n    analysis = JSON.parse(cleanedText);\n} catch (error) {\n    throw new Error(\"Unable to parse Claude's response as JSON.\");\n}\n\nreturn [\n    {\n        json: {\n            category: analysis.category,\n            risk_level: analysis.risk_level,\n            summary: analysis.summary,\n            recommendation: analysis.recommendation,\n            reasoning: analysis.reasoning\n        }\n    }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "2f670e3b-75a1-4a63-9642-e4a4f086358d",
+      "name": "Parse AI Response"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_DATA_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "refund_requests"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Save Refund Request').first().json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ $json.decision }}",
+            "ai_summary": "={{ $json.summary }}",
+            "ai_recommendation": "={{ $json.recommendation }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "order_id",
+              "displayName": "order_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "refund_amount",
+              "displayName": "refund_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "purchase_date",
+              "displayName": "purchase_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "refund_reason",
+              "displayName": "refund_reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_summary",
+              "displayName": "ai_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_recommendation",
+              "displayName": "ai_recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "manager_decision",
+              "displayName": "manager_decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "manager_notes",
+              "displayName": "manager_notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "c21efc48-2bec-4b88-adc1-9c6756cd0977",
+      "name": "Update Refund Status"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Refund Decision Rules').first().json.decision }}",
+                    "rightValue": "auto_approved",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c7d669cf-0ed3-4011-9ad3-dc93c0062b90"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Auto Approved"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "590270f7-91c0-4aa5-ba2c-f2f52edb4477",
+                    "leftValue": "={{ $('Refund Decision Rules').first().json.decision }}",
+                    "rightValue": "pending_review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Manager Review"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        1344,
+        0
+      ],
+      "id": "0a6fa931-de6d-4e8f-8409-ede425899d3d",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: true,\n  message: \"Refund request submitted and automatically approved.\",\n  status: \"auto_approved\"\n}) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1616,
+        -80
+      ],
+      "id": "a1b967ca-5b80-44da-a266-5fb043326099",
+      "name": "Auto Approve Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Refund request received successfully.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1616,
+        80
+      ],
+      "id": "c9daaa58-e80c-4c42-a49d-4d844f70a2c5",
+      "name": "Manager Review Response"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Save Refund Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refund Decision Rules": {
+      "main": [
+        [
+          {
+            "node": "Update Refund Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Refund Request": {
+      "main": [
+        [
+          {
+            "node": "Claude Refund Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Refund Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Refund Decision Rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Refund Status": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Auto Approve Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Manager Review Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

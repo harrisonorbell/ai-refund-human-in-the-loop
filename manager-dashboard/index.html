@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refund Approval Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+
+    <!-- Manager Login -->
+    <section id="loginSection" class="login-section">
+        <div class="login-card">
+            <h1>Manager Login</h1>
+            <p>Sign in to manage customer refund requests.</p>
+
+            <form id="loginForm">
+                <label for="managerUsername">Username</label>
+                <input
+                    type="text"
+                    id="managerUsername"
+                    autocomplete="username"
+                    required
+                >
+
+                <label for="managerPassword">Password</label>
+                <input
+                    type="password"
+                    id="managerPassword"
+                    autocomplete="current-password"
+                    required
+                >
+
+                <button type="submit">Sign In</button>
+            </form>
+
+            <p id="loginMessage" role="status"></p>
+        </div>
+    </section>
+
+    <!-- Manager Dashboard -->
+    <div id="dashboardSection" class="dashboard" hidden>
+        <header class="dashboard-header">
+            <div>
+                <h1>Refund Approval Dashboard</h1>
+                <p>Review and manage customer refund requests.</p>
+            </div>
+
+            <div class="header-actions">
+                <button id="refreshButton" type="button">
+                    Refresh Requests
+                </button>
+
+                <button id="logoutButton" type="button">
+                    Log Out
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Dashboard Summary -->
+            <section class="summary">
+                <div class="summary-card">
+                    <h2>Pending Reviews</h2>
+                    <p id="pendingCount">0</p>
+                </div>
+
+                <div class="summary-card">
+                    <h2>Approved</h2>
+                    <p id="approvedCount">—</p>
+                </div>
+
+                <div class="summary-card">
+                    <h2>Rejected</h2>
+                    <p id="rejectedCount">—</p>
+                </div>
+            </section>
+
+            <!-- Pending Refund Requests -->
+            <section class="requests-section">
+                <h2>Refund Requests</h2>
+
+                <p id="dashboardMessage" role="status"></p>
+
+                <div id="requestsContainer">
+                    <p class="empty-state">
+                        No refund requests loaded yet.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Refund History -->
+            <section class="requests-section refund-history-section">
+                <h2>Refund History</h2>
+                <p class="history-description">
+                    View previously approved and rejected refund requests.
+                </p>
+
+                <div class="history-filters">
+                    <button
+                        id="allHistoryButton"
+                        class="history-filter active"
+                        type="button"
+                    >
+                        All
+                    </button>
+
+                    <button
+                        id="approvedHistoryButton"
+                        class="history-filter"
+                        type="button"
+                    >
+                        Approved
+                    </button>
+
+                    <button
+                        id="rejectedHistoryButton"
+                        class="history-filter"
+                        type="button"
+                    >
+                        Rejected
+                    </button>
+                </div>
+
+                <div id="historyContainer" class="history-container">
+                    <p class="empty-state">
+                        Loading refund history...
+                    </p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+</body>
+</html>

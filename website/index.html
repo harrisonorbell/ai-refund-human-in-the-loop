@@ -1,0 +1,59 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coastal Electronics | Refund Request</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main class="container">
+        <header>
+            <h1>Coastal Electronics</h1>
+            <p>Customer Refund Request Portal</p>
+        </header>
+
+        <section class="form-card">
+            <h2>Request a Refund</h2>
+            <p class="description">
+                Complete the form below to submit your refund request.
+            </p>
+
+            <form id="refundForm">
+
+                <label for="customerName">Full Name</label>
+                <input type="text" id="customerName" required>
+
+                <label for="customerEmail">Email Address</label>
+                <input type="email" id="customerEmail" required>
+
+                <label for="orderId">Order ID</label>
+                <input type="text" id="orderId" required>
+
+                <label for="refundAmount">Refund Amount ($)</label>
+                <input type="number" id="refundAmount"
+                       min="0.01" step="0.01" required>
+
+                <label for="purchaseDate">Purchase Date</label>
+                <input type="date" id="purchaseDate" required>
+
+                <label for="refundReason">Reason for Refund</label>
+                <textarea id="refundReason" rows="5"
+                          placeholder="Explain why you are requesting a refund..."
+                          required></textarea>
+
+                <button type="submit" id="submitRefund">
+                    Submit Refund Request
+                </button>
+
+            </form>
+
+            <div id="message" role="status" aria-live="polite"></div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

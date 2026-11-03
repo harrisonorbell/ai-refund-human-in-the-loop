@@ -1,0 +1,591 @@
+{
+  "name": "Project 4 - Manager Dashboard API",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "refund_requests",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3098a424-f047-4242-ac7b-12ad81c9b27f",
+      "name": "Get Refund Requests"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_DATA_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "refund_requests"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "keyValue": "pending_review"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "65338598-db2d-45a6-827e-cbd860893f34",
+      "name": "Get Pending Refunds",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($input.all().map(item => item.json).filter(refund => refund.id != null)) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "e695bbed-493d-483a-a51a-85467e14ade7",
+      "name": "Return Refund Requests"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "refund-decision",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        224
+      ],
+      "id": "6d5d0629-404a-4494-9a76-70817b0f8ee5",
+      "name": "Submit Manager Decision"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst body = $input.first().json.body ?? {};\n\nconst requestId = Number(body.request_id);\nconst decision = body.decision;\nconst managerNotes = body.manager_notes;\n\nif (!Number.isSafeInteger(requestId) || requestId <= 0) {\n    throw new Error(\"Invalid refund request ID.\");\n}\n\nif (![\"approved\", \"rejected\"].includes(decision)) {\n    throw new Error(\"Decision must be approved or rejected.\");\n}\n\nif (\n    typeof managerNotes !== \"string\" ||\n    managerNotes.trim().length < 5\n) {\n    throw new Error(\"Manager must provide a reason of at least 5 characters.\");\n}\n\nreturn [{\n    json: {\n        request_id: requestId,\n        decision: decision,\n        manager_notes: managerNotes.trim()\n    }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        224
+      ],
+      "id": "1a77be86-0986-4c5b-904f-5ba674e59cd4",
+      "name": "Validate Manager Decision"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_DATA_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "refund_requests"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $json.request_id }}"
+            },
+            {
+              "keyName": "status",
+              "keyValue": "pending_review"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        224
+      ],
+      "id": "1de2d115-fea5-400f-98c4-195465212139",
+      "name": "Find Pending Refund",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "cbccb914-1b18-4f54-8e86-76bb58363cea",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        672,
+        224
+      ],
+      "id": "8d5d932f-589f-4d4d-a17d-9566d0d1ca6e",
+      "name": "Refund Still Pending?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"message\": \"Refund request not found or already processed.\"\n}",
+        "options": {
+          "responseCode": 409
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        320
+      ],
+      "id": "41696afd-2e51-4f06-9013-bb10cfaa0add",
+      "name": "Refund Not Available"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_DATA_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "refund_requests"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Validate Manager Decision').first().json.request_id }}"
+            },
+            {
+              "keyName": "status",
+              "keyValue": "pending_review"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ $('Validate Manager Decision').first().json.decision }}",
+            "manager_decision": "={{ $('Validate Manager Decision').first().json.decision }}",
+            "manager_notes": "={{ $('Validate Manager Decision').first().json.manager_notes }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "order_id",
+              "displayName": "order_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "refund_amount",
+              "displayName": "refund_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "purchase_date",
+              "displayName": "purchase_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "refund_reason",
+              "displayName": "refund_reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_summary",
+              "displayName": "ai_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_recommendation",
+              "displayName": "ai_recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "manager_decision",
+              "displayName": "manager_decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "manager_notes",
+              "displayName": "manager_notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        128
+      ],
+      "id": "499b91ee-482d-4258-bf74-8e62aeb3e1a8",
+      "name": "Save Manager Decision"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=\n{{\n  JSON.stringify({\n    success: true,\n    message: \"Manager decision recorded successfully.\",\n    request_id: $('Validate Manager Decision').first().json.request_id,\n    decision: $('Validate Manager Decision').first().json.decision\n  })\n}}\n",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1344,
+        32
+      ],
+      "id": "82c2e69e-a784-48e4-b0f1-641c8e26131e",
+      "name": "Decision Saved Response"
+    },
+    {
+      "parameters": {
+        "path": "refund_history",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        640
+      ],
+      "id": "33706b17-0ca4-495f-85c3-d08243aefb9c",
+      "name": "Get Refund History"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_DATA_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "refund_requests"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        640
+      ],
+      "id": "39ca5d77-4e88-4a1a-9f6f-c473ce7d31c3",
+      "name": "Get All Refunds",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($input.all().map(item => item.json).filter(refund => refund.id != null)) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        640
+      ],
+      "id": "5c5626a6-0b7f-465d-b336-87bdac91651b",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "0decb1ae-d478-4314-8804-e28fce546c81",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "={{ $('Validate Manager Decision').first().json.decision }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1120,
+        128
+      ],
+      "id": "4bb80d32-f97d-4646-8558-37bc40f3a76a",
+      "name": "Decision Update Successful?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: false,\n  message: \"Unable to verify that the manager decision was saved. Please refresh and check the refund status before trying again.\"\n}) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1344,
+        224
+      ],
+      "id": "c7e7f656-664e-4204-a74c-303cf757e288",
+      "name": "Decision Update Failed Response"
+    }
+  ],
+  "connections": {
+    "Get Refund Requests": {
+      "main": [
+        [
+          {
+            "node": "Get Pending Refunds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pending Refunds": {
+      "main": [
+        [
+          {
+            "node": "Return Refund Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Manager Decision": {
+      "main": [
+        [
+          {
+            "node": "Validate Manager Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Manager Decision": {
+      "main": [
+        [
+          {
+            "node": "Find Pending Refund",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Pending Refund": {
+      "main": [
+        [
+          {
+            "node": "Refund Still Pending?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refund Still Pending?": {
+      "main": [
+        [
+          {
+            "node": "Save Manager Decision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refund Not Available",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Manager Decision": {
+      "main": [
+        [
+          {
+            "node": "Decision Update Successful?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Refund History": {
+      "main": [
+        [
+          {
+            "node": "Get All Refunds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Refunds": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision Update Successful?": {
+      "main": [
+        [
+          {
+            "node": "Decision Saved Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Decision Update Failed Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
